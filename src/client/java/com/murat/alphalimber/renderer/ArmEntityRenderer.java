@@ -16,8 +16,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec3;
 
 public class ArmEntityRenderer extends EntityRenderer<ArmEntity> {
-    private final ArmSegmentModel segmentModel;
     private static final ResourceLocation TEXTURE = new ResourceLocation("limber", "textures/entity/arm.png");
+    private static final float MODEL_HEIGHT = 11.0f / 16.0f;
+    private static final float TAPER_FACTOR = 0.3f;
+
+    private final ArmSegmentModel segmentModel;
 
     public ArmEntityRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -34,7 +37,7 @@ public class ArmEntityRenderer extends EntityRenderer<ArmEntity> {
 
     @Override
     public ResourceLocation getTextureLocation(ArmEntity entity) {
-        return new ResourceLocation("limber", "textures/entity/arm.png");
+        return TEXTURE;
     }
 
     @Override
@@ -82,10 +85,8 @@ public class ArmEntityRenderer extends EntityRenderer<ArmEntity> {
             poseStack.mulPose(Axis.XP.rotation(pitch));
             poseStack.mulPose(Axis.XP.rotationDegrees(90));
 
-            // Scale to match actual distance between joints
-            float modelHeight = 11.0f / 16.0f;
-            float taper = 1.0f - (i * 0.3f);
-            poseStack.scale(taper, (float)(length / modelHeight), taper);
+            float taper = 1.0f - (i * TAPER_FACTOR);
+            poseStack.scale(taper, (float) (length / MODEL_HEIGHT), taper);
 
             segmentModel.renderToBuffer(
                     poseStack,
