@@ -18,8 +18,11 @@ public class SpiderEntity extends Entity {
     private static final double SEGMENT_LENGTH = 1.0;
     private static final int NUM_SEGMENTS = 3;
     private static final int NUM_LEGS = 8;
-    private static final double SOLVE_TOLERANCE = 0.1;
-private static final double MOVE_SPEED = 2.0 / 20.0; // 2 blocks per second
+    private static final double MOVE_SPEED = 2.0 / 20.0;   // 2 blocks/sec
+    private static final double ROOT_Y_OFFSET = 1.4;        // root above body center
+    private static final double REST_RADIUS = 1.5;          // horizontal foot distance
+    private static final double REST_Y_OFFSET = -1.0;       // foot below body center
+    private static final double STEP_THRESHOLD = 1.5;       // dist before foot steps
 
     // --- Synched Data ---
 
@@ -50,16 +53,19 @@ private static final double MOVE_SPEED = 2.0 / 20.0; // 2 blocks per second
         legs = new Vec3[NUM_LEGS][NUM_SEGMENTS + 1];
         legTargets = new Vec3[NUM_LEGS];
 
-        Vec3 sharedRoot = new Vec3(center.x, center.y + 0.7, center.z);
+        Vec3 sharedRoot = new Vec3(center.x, center.y + ROOT_Y_OFFSET, center.z);
+
         for (int leg = 0; leg < NUM_LEGS; leg++) {
             double angle = (2 * Math.PI * leg) / NUM_LEGS;
 
-            Vec3 direction = new Vec3(Math.sin(angle), -1.0 / 3.0, Math.cos(angle)).normalize();
+            Vec3 restPos = restPosition(center, angle);
+            legTargets[leg] = restPos;
+
+            Vec3 direction = restPos.subtract(sharedRoot).normalize();
             legs[leg][0] = sharedRoot;
             for (int j = 1; j <= NUM_SEGMENTS; j++) {
                 legs[leg][j] = legs[leg][j - 1].add(direction.scale(SEGMENT_LENGTH));
             }
-            legTargets[leg] = legs[leg][NUM_SEGMENTS];
         }
 
         previousLegs = copyLegs(legs);
@@ -95,6 +101,7 @@ private static final double MOVE_SPEED = 2.0 / 20.0; // 2 blocks per second
             if (bodyTarget != null) {
                 moveTowardTarget();
             }
+            checkAndStepLegs();
             serverStep();
             return;
         }
@@ -169,11 +176,31 @@ private static final double MOVE_SPEED = 2.0 / 20.0; // 2 blocks per second
     }
 
     private void updateLegRoots(Vec3 center) {
-        Vec3 sharedRoot = new Vec3(center.x, center.y + 0.7, center.z);
+        Vec3 sharedRoot = new Vec3(center.x, center.y + ROOT_Y_OFFSET, center.z);
         for (int leg = 0; leg < NUM_LEGS; leg++) {
             legs[leg][0] = sharedRoot;
-            // legTargets stay fixed in world space — feet stay planted
         }
+    }
+
+    // --- Stepping ---
+
+    private void checkAndStepLegs() {
+        Vec3 center = position();
+        for (int leg = 0; leg < NUM_LEGS; leg++) {
+            double angle = (2 * Math.PI * leg) / NUM_LEGS;
+            Vec3 idealRest = restPosition(center, angle);
+            if (idealRest.distanceTo(legTargets[leg]) > STEP_THRESHOLD) {
+                legTargets[leg] = idealRest;
+            }
+        }
+    }
+
+    private Vec3 restPosition(Vec3 center, double angle) {
+        return new Vec3(
+                center.x + REST_RADIUS * Math.sin(angle),
+                center.y + REST_Y_OFFSET,
+                center.z + REST_RADIUS * Math.cos(angle)
+        );
     }
 
     // --- Serialization ---

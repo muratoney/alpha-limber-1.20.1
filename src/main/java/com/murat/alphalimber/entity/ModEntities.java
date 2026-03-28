@@ -23,7 +23,7 @@ public class ModEntities{
                     BuiltInRegistries.ENTITY_TYPE,
                     new ResourceLocation("limber", "spider"),
                     FabricEntityTypeBuilder.create(MobCategory.MISC, SpiderEntity::new)
-                            .dimensions(EntityDimensions.fixed(1.5f, 1.0f))
+                            .dimensions(EntityDimensions.fixed(1.5f, 2.5f))
                             .build()
             );
 
