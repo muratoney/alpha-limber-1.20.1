@@ -9,6 +9,7 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
 public class SpiderEntity extends Entity {
@@ -16,12 +17,11 @@ public class SpiderEntity extends Entity {
     // --- Constants ---
 
     private static final double SEGMENT_LENGTH = 1.0;
-    private static final int NUM_SEGMENTS = 4;
+    private static final int NUM_SEGMENTS = 3;
     private static final int NUM_LEGS = 8;
     private static final double MOVE_SPEED = 2.0 / 20.0;   // 2 blocks/sec
-    private static final double ROOT_Y_OFFSET = 2.0;        // root above body center
+    private static final double ROOT_Y_OFFSET = 1.5;        // root above body center
     private static final double REST_RADIUS = 1.5;          // horizontal foot distance
-    private static final double REST_Y_OFFSET = -1.0;       // foot below body center
     private static final double STEP_THRESHOLD = 1.5;       // dist before foot steps
 
     // --- Synched Data ---
@@ -197,11 +197,11 @@ public class SpiderEntity extends Entity {
     }
 
     private Vec3 restPosition(Vec3 center, double angle) {
-        return new Vec3(
-                center.x + REST_RADIUS * Math.sin(angle),
-                center.y + REST_Y_OFFSET,
-                center.z + REST_RADIUS * Math.cos(angle)
-        );
+        double footX = center.x + REST_RADIUS * Math.sin(angle);
+        double footZ = center.z + REST_RADIUS * Math.cos(angle);
+        int groundY = level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (int) footX, (int) footZ);
+        return new Vec3(footX, groundY, footZ);
     }
 
     // --- Serialization ---
