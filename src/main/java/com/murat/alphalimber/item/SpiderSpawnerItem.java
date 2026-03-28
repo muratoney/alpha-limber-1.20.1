@@ -16,7 +16,7 @@ public class SpiderSpawnerItem extends Item {
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level world = context.getLevel();
-        Vec3 spawnPos = context.getClickedPos().getCenter().add(0, 0.5, 0);
+        Vec3 spawnPos = context.getClickedPos().getCenter().add(0, 1.5, 0);
 
         if (!world.isClientSide()) {
             SpiderEntity spider = new SpiderEntity(ModEntities.SPIDER, world);
