@@ -32,7 +32,6 @@ public class SpiderEntity extends Entity {
     private Vec3[][] legs;
     private Vec3[][] previousLegs;
     private Vec3[] legTargets;
-    private boolean[] isForwardPass;
     private Vec3 bodyTarget;
 
     // --- Constructor ---
@@ -51,7 +50,6 @@ public class SpiderEntity extends Entity {
     public void initializeLegs(Vec3 center) {
         legs = new Vec3[NUM_LEGS][NUM_SEGMENTS + 1];
         legTargets = new Vec3[NUM_LEGS];
-        isForwardPass = new boolean[NUM_LEGS];
 
         for (int leg = 0; leg < NUM_LEGS; leg++) {
             double angle = (2 * Math.PI * leg) / NUM_LEGS;
@@ -65,7 +63,6 @@ public class SpiderEntity extends Entity {
                 legs[leg][j] = legs[leg][j - 1].add(direction.scale(SEGMENT_LENGTH));
             }
             legTargets[leg] = legs[leg][NUM_SEGMENTS];
-            isForwardPass[leg] = true;
         }
 
         previousLegs = copyLegs(legs);
@@ -148,12 +145,8 @@ public class SpiderEntity extends Entity {
         if (root.distanceTo(target) >= maxReach) {
             legs[leg] = FABRIKSolver.straightenToward(legs[leg], root, target, SEGMENT_LENGTH);
         } else {
-            if (isForwardPass[leg]) {
-                legs[leg] = FABRIKSolver.forwardPass(legs[leg], target, SEGMENT_LENGTH);
-            } else {
-                legs[leg] = FABRIKSolver.backwardPass(legs[leg], root, SEGMENT_LENGTH);
-            }
-            isForwardPass[leg] = !isForwardPass[leg];
+            legs[leg] = FABRIKSolver.forwardPass(legs[leg], target, SEGMENT_LENGTH);
+            legs[leg] = FABRIKSolver.backwardPass(legs[leg], root, SEGMENT_LENGTH);
         }
         BlockConstraintHandler.applyConstraints(legs[leg], level());
     }
@@ -199,7 +192,6 @@ public class SpiderEntity extends Entity {
 
         legs = new Vec3[numLegs][];
         legTargets = new Vec3[numLegs];
-        isForwardPass = new boolean[numLegs];
 
         for (int leg = 0; leg < numLegs; leg++) {
             int count = tag.getInt("leg_" + leg + "_count");
@@ -216,7 +208,6 @@ public class SpiderEntity extends Entity {
                     tag.getDouble("target_" + leg + "_y"),
                     tag.getDouble("target_" + leg + "_z")
             );
-            isForwardPass[leg] = tag.getBoolean("forward_" + leg);
         }
 
         if (tag.contains("bodyTargetX")) {
@@ -244,7 +235,6 @@ public class SpiderEntity extends Entity {
             tag.putDouble("target_" + leg + "_x", legTargets[leg].x);
             tag.putDouble("target_" + leg + "_y", legTargets[leg].y);
             tag.putDouble("target_" + leg + "_z", legTargets[leg].z);
-            tag.putBoolean("forward_" + leg, isForwardPass[leg]);
         }
         if (bodyTarget != null) {
             tag.putDouble("bodyTargetX", bodyTarget.x);
