@@ -147,9 +147,10 @@ public class SpiderEntity extends Entity {
         if (root.distanceTo(target) >= maxReach) {
             legs[leg] = FABRIKSolver.straightenToward(legs[leg], root, target, SEGMENT_LENGTH);
         } else {
-            legs[leg] = FABRIKSolver.straightenToward(legs[leg], root, target, SEGMENT_LENGTH);
-            legs[leg] = FABRIKSolver.forwardPass(legs[leg], target, SEGMENT_LENGTH);
-            legs[leg] = FABRIKSolver.backwardPass(legs[leg], root, SEGMENT_LENGTH);
+            for (int i = 0; i < 3; i++) {
+                legs[leg] = FABRIKSolver.forwardPass(legs[leg], target, SEGMENT_LENGTH);
+                legs[leg] = FABRIKSolver.backwardPass(legs[leg], root, SEGMENT_LENGTH);
+            }
         }
         BlockConstraintHandler.applyConstraints(legs[leg], level());
     }
@@ -201,7 +202,7 @@ public class SpiderEntity extends Entity {
         double footZ = center.z + REST_RADIUS * Math.cos(angle);
         int groundY = level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 (int) footX, (int) footZ);
-        return new Vec3(footX, groundY, footZ);
+        return new Vec3(footX, groundY + 0.1, footZ);
     }
 
     // --- Serialization ---
