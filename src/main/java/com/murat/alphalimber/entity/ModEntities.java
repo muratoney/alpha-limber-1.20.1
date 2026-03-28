@@ -18,6 +18,15 @@ public class ModEntities{
                             .build()
             );
 
+    public static final EntityType<SpiderEntity> SPIDER =
+            Registry.register(
+                    BuiltInRegistries.ENTITY_TYPE,
+                    new ResourceLocation("limber", "spider"),
+                    FabricEntityTypeBuilder.create(MobCategory.MISC, SpiderEntity::new)
+                            .dimensions(EntityDimensions.fixed(1.5f, 1.0f))
+                            .build()
+            );
+
     public static void register() {
 
     }
