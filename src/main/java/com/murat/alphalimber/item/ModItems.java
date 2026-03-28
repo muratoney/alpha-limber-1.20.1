@@ -24,6 +24,18 @@ public class ModItems {
             new StepControllerItem(new Item.Properties())
     );
 
+    public static final Item SPIDER_SPAWNER = Registry.register(
+            BuiltInRegistries.ITEM,
+            new ResourceLocation("limber", "spider_spawner"),
+            new SpiderSpawnerItem(new Item.Properties())
+    );
+
+    public static final Item SPIDER_TARGET_POINTER = Registry.register(
+            BuiltInRegistries.ITEM,
+            new ResourceLocation("limber", "spider_target_pointer"),
+            new SpiderTargetPointerItem(new Item.Properties())
+    );
+
     public static void register() {
 
     }

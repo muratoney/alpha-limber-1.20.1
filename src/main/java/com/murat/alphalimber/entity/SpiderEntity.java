@@ -20,6 +20,7 @@ public class SpiderEntity extends Entity {
     private static final int NUM_LEGS = 8;
     private static final double SOLVE_TOLERANCE = 0.1;
     private static final double LEG_ROOT_RADIUS = 0.8;
+    private static final double MOVE_SPEED = 1.0 / 20.0; // 1 block per second
 
     // --- Synched Data ---
 
@@ -32,6 +33,7 @@ public class SpiderEntity extends Entity {
     private Vec3[][] previousLegs;
     private Vec3[] legTargets;
     private boolean[] isForwardPass;
+    private Vec3 bodyTarget;
 
     // --- Constructor ---
 
@@ -93,9 +95,13 @@ public class SpiderEntity extends Entity {
         super.tick();
 
         if (!this.level().isClientSide()) {
-            if (legs != null) {
-                serverStep();
+            if (legs == null) {
+                initializeLegs(position());
             }
+            if (bodyTarget != null) {
+                moveTowardTarget();
+            }
+            serverStep();
             return;
         }
 
@@ -152,6 +158,39 @@ public class SpiderEntity extends Entity {
         BlockConstraintHandler.applyConstraints(legs[leg], level());
     }
 
+    // --- Movement ---
+
+    public void setBodyTarget(Vec3 target) {
+        this.bodyTarget = target;
+    }
+
+    private void moveTowardTarget() {
+        Vec3 pos = position();
+        Vec3 delta = bodyTarget.subtract(pos);
+        double dist = delta.length();
+
+        if (dist <= MOVE_SPEED) {
+            setPos(bodyTarget.x, bodyTarget.y, bodyTarget.z);
+            updateLegRoots(bodyTarget);
+            bodyTarget = null;
+        } else {
+            Vec3 newPos = pos.add(delta.normalize().scale(MOVE_SPEED));
+            setPos(newPos.x, newPos.y, newPos.z);
+            updateLegRoots(newPos);
+        }
+    }
+
+    private void updateLegRoots(Vec3 center) {
+        for (int leg = 0; leg < NUM_LEGS; leg++) {
+            double angle = (2 * Math.PI * leg) / NUM_LEGS;
+            double rootX = center.x + LEG_ROOT_RADIUS * Math.sin(angle);
+            double rootZ = center.z + LEG_ROOT_RADIUS * Math.cos(angle);
+            legs[leg][0] = new Vec3(rootX, center.y, rootZ);
+            Vec3 direction = new Vec3(Math.sin(angle), -0.5, Math.cos(angle)).normalize();
+            legTargets[leg] = legs[leg][0].add(direction.scale(NUM_SEGMENTS * SEGMENT_LENGTH));
+        }
+    }
+
     // --- Serialization ---
 
     @Override
@@ -180,6 +219,15 @@ public class SpiderEntity extends Entity {
             );
             isForwardPass[leg] = tag.getBoolean("forward_" + leg);
         }
+
+        if (tag.contains("bodyTargetX")) {
+            bodyTarget = new Vec3(
+                    tag.getDouble("bodyTargetX"),
+                    tag.getDouble("bodyTargetY"),
+                    tag.getDouble("bodyTargetZ")
+            );
+        }
+
         syncLegs();
     }
 
@@ -198,6 +246,11 @@ public class SpiderEntity extends Entity {
             tag.putDouble("target_" + leg + "_y", legTargets[leg].y);
             tag.putDouble("target_" + leg + "_z", legTargets[leg].z);
             tag.putBoolean("forward_" + leg, isForwardPass[leg]);
+        }
+        if (bodyTarget != null) {
+            tag.putDouble("bodyTargetX", bodyTarget.x);
+            tag.putDouble("bodyTargetY", bodyTarget.y);
+            tag.putDouble("bodyTargetZ", bodyTarget.z);
         }
     }
 
