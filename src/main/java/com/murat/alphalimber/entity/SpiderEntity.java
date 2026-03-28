@@ -19,8 +19,7 @@ public class SpiderEntity extends Entity {
     private static final int NUM_SEGMENTS = 3;
     private static final int NUM_LEGS = 8;
     private static final double SOLVE_TOLERANCE = 0.1;
-    private static final double LEG_ROOT_RADIUS = 0.8;
-    private static final double MOVE_SPEED = 2.0 / 20.0; // 2 blocks per second
+private static final double MOVE_SPEED = 2.0 / 20.0; // 2 blocks per second
 
     // --- Synched Data ---
 
@@ -51,14 +50,12 @@ public class SpiderEntity extends Entity {
         legs = new Vec3[NUM_LEGS][NUM_SEGMENTS + 1];
         legTargets = new Vec3[NUM_LEGS];
 
+        Vec3 sharedRoot = new Vec3(center.x, center.y + 0.7, center.z);
         for (int leg = 0; leg < NUM_LEGS; leg++) {
             double angle = (2 * Math.PI * leg) / NUM_LEGS;
-            double rootX = center.x + LEG_ROOT_RADIUS * Math.sin(angle);
-            double rootZ = center.z + LEG_ROOT_RADIUS * Math.cos(angle);
-            Vec3 root = new Vec3(rootX, center.y, rootZ);
 
             Vec3 direction = new Vec3(Math.sin(angle), -1.0 / 3.0, Math.cos(angle)).normalize();
-            legs[leg][0] = root;
+            legs[leg][0] = sharedRoot;
             for (int j = 1; j <= NUM_SEGMENTS; j++) {
                 legs[leg][j] = legs[leg][j - 1].add(direction.scale(SEGMENT_LENGTH));
             }
@@ -172,11 +169,9 @@ public class SpiderEntity extends Entity {
     }
 
     private void updateLegRoots(Vec3 center) {
+        Vec3 sharedRoot = new Vec3(center.x, center.y + 0.7, center.z);
         for (int leg = 0; leg < NUM_LEGS; leg++) {
-            double angle = (2 * Math.PI * leg) / NUM_LEGS;
-            double rootX = center.x + LEG_ROOT_RADIUS * Math.sin(angle);
-            double rootZ = center.z + LEG_ROOT_RADIUS * Math.cos(angle);
-            legs[leg][0] = new Vec3(rootX, center.y, rootZ);
+            legs[leg][0] = sharedRoot;
             // legTargets stay fixed in world space — feet stay planted
         }
     }
