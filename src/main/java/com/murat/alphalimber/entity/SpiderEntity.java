@@ -16,10 +16,10 @@ public class SpiderEntity extends Entity {
     // --- Constants ---
 
     private static final double SEGMENT_LENGTH = 1.0;
-    private static final int NUM_SEGMENTS = 3;
+    private static final int NUM_SEGMENTS = 4;
     private static final int NUM_LEGS = 8;
     private static final double MOVE_SPEED = 2.0 / 20.0;   // 2 blocks/sec
-    private static final double ROOT_Y_OFFSET = 1.4;        // root above body center
+    private static final double ROOT_Y_OFFSET = 2.0;        // root above body center
     private static final double REST_RADIUS = 1.5;          // horizontal foot distance
     private static final double REST_Y_OFFSET = -1.0;       // foot below body center
     private static final double STEP_THRESHOLD = 1.5;       // dist before foot steps
