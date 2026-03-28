@@ -139,8 +139,6 @@ public class SpiderEntity extends Entity {
         Vec3 root = legs[leg][0];
         Vec3 target = legTargets[leg];
 
-        if (FABRIKSolver.isSolved(legs[leg], target, root, SOLVE_TOLERANCE)) return;
-
         double maxReach = NUM_SEGMENTS * SEGMENT_LENGTH;
         if (root.distanceTo(target) >= maxReach) {
             legs[leg] = FABRIKSolver.straightenToward(legs[leg], root, target, SEGMENT_LENGTH);
