@@ -147,6 +147,7 @@ public class SpiderEntity extends Entity {
         if (root.distanceTo(target) >= maxReach) {
             legs[leg] = FABRIKSolver.straightenToward(legs[leg], root, target, SEGMENT_LENGTH);
         } else {
+            legs[leg] = FABRIKSolver.straightenToward(legs[leg], root, target, SEGMENT_LENGTH);
             legs[leg] = FABRIKSolver.forwardPass(legs[leg], target, SEGMENT_LENGTH);
             legs[leg] = FABRIKSolver.backwardPass(legs[leg], root, SEGMENT_LENGTH);
         }
