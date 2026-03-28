@@ -18,11 +18,12 @@ public class SpiderEntity extends Entity {
 
     private static final double SEGMENT_LENGTH = 1.0;
     private static final int NUM_SEGMENTS = 3;
-    private static final int NUM_LEGS = 8;
-    private static final double MOVE_SPEED = 2.0 / 20.0;   // 2 blocks/sec
-    private static final double ROOT_Y_OFFSET = 1.5;        // root above body center
+    private static final int NUM_LEGS = 4;
+    private static final double MOVE_SPEED = 4.0 / 20.0;   // 4 blocks/sec
+    private static final double ROOT_Y_OFFSET = 1.3;        // root above body center
     private static final double REST_RADIUS = 1.5;          // horizontal foot distance
     private static final double STEP_THRESHOLD = 1.5;       // dist before foot steps
+    private static final double STRAIGHTEN_HEIGHT = 1.25;   // upward bias before FABRIK
 
     // --- Synched Data ---
 
@@ -34,6 +35,7 @@ public class SpiderEntity extends Entity {
     private Vec3[][] legs;
     private Vec3[][] previousLegs;
     private Vec3[] legTargets;
+    private boolean[] legStepping;
     private Vec3 bodyTarget;
 
     // --- Constructor ---
@@ -52,6 +54,7 @@ public class SpiderEntity extends Entity {
     public void initializeLegs(Vec3 center) {
         legs = new Vec3[NUM_LEGS][NUM_SEGMENTS + 1];
         legTargets = new Vec3[NUM_LEGS];
+        legStepping = new boolean[NUM_LEGS];
 
         Vec3 sharedRoot = new Vec3(center.x, center.y + ROOT_Y_OFFSET, center.z);
 
@@ -142,15 +145,17 @@ public class SpiderEntity extends Entity {
     private void solveLeg(int leg) {
         Vec3 root = legs[leg][0];
         Vec3 target = legTargets[leg];
-
         double maxReach = NUM_SEGMENTS * SEGMENT_LENGTH;
-        if (root.distanceTo(target) >= maxReach) {
-            legs[leg] = FABRIKSolver.straightenToward(legs[leg], root, target, SEGMENT_LENGTH);
-        } else {
-            for (int i = 0; i < 3; i++) {
+
+        if (root.distanceTo(target) < maxReach) {
+            for (int i = 0; i < 10; i++) {
                 legs[leg] = FABRIKSolver.forwardPass(legs[leg], target, SEGMENT_LENGTH);
                 legs[leg] = FABRIKSolver.backwardPass(legs[leg], root, SEGMENT_LENGTH);
+                if (legs[leg][NUM_SEGMENTS].distanceTo(target) < 0.01) break;
             }
+        }
+        if (legs[leg][NUM_SEGMENTS].distanceTo(target) < 0.05) {
+            legStepping[leg] = false;
         }
         BlockConstraintHandler.applyConstraints(legs[leg], level());
     }
@@ -191,8 +196,26 @@ public class SpiderEntity extends Entity {
         for (int leg = 0; leg < NUM_LEGS; leg++) {
             double angle = (2 * Math.PI * leg) / NUM_LEGS;
             Vec3 idealRest = restPosition(center, angle);
-            if (idealRest.distanceTo(legTargets[leg]) > STEP_THRESHOLD) {
+            int prev = (leg + NUM_LEGS - 1) % NUM_LEGS;
+            int next = (leg + 1) % NUM_LEGS;
+            boolean adjacentStepping = legStepping[prev] || legStepping[next];
+            if (!adjacentStepping && idealRest.distanceTo(legTargets[leg]) > STEP_THRESHOLD) {
+                legStepping[leg] = true;
                 legTargets[leg] = idealRest;
+                Vec3 root = legs[leg][0];
+                Vec3 rawDir = idealRest.subtract(root).normalize();
+                Vec3 biasedDir = new Vec3(rawDir.x, rawDir.y + STRAIGHTEN_HEIGHT, rawDir.z).normalize();
+                for (int j = 0; j < legs[leg].length; j++) {
+                    legs[leg][j] = root.add(biasedDir.scale(j * SEGMENT_LENGTH));
+                }
+                double maxReach = NUM_SEGMENTS * SEGMENT_LENGTH;
+                if (root.distanceTo(idealRest) < maxReach) {
+                    for (int i = 0; i < 20; i++) {
+                        legs[leg] = FABRIKSolver.forwardPass(legs[leg], idealRest, SEGMENT_LENGTH);
+                        legs[leg] = FABRIKSolver.backwardPass(legs[leg], root, SEGMENT_LENGTH);
+                        if (legs[leg][NUM_SEGMENTS].distanceTo(idealRest) < 0.01) break;
+                    }
+                }
             }
         }
     }
@@ -201,8 +224,8 @@ public class SpiderEntity extends Entity {
         double footX = center.x + REST_RADIUS * Math.sin(angle);
         double footZ = center.z + REST_RADIUS * Math.cos(angle);
         int groundY = level().getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                (int) footX, (int) footZ);
-        return new Vec3(footX, groundY + 0.1, footZ);
+                (int) Math.floor(footX), (int) Math.floor(footZ));
+        return new Vec3(footX, groundY, footZ);
     }
 
     // --- Serialization ---
@@ -214,6 +237,7 @@ public class SpiderEntity extends Entity {
 
         legs = new Vec3[numLegs][];
         legTargets = new Vec3[numLegs];
+        legStepping = new boolean[numLegs];
 
         for (int leg = 0; leg < numLegs; leg++) {
             int count = tag.getInt("leg_" + leg + "_count");
