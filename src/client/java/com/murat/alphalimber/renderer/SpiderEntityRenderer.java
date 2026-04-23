@@ -12,12 +12,17 @@ import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
 
 public class SpiderEntityRenderer extends EntityRenderer<SpiderEntity> {
     private static final ResourceLocation TEXTURE = new ResourceLocation("limber", "textures/entity/arm.png");
     private static final float MODEL_HEIGHT = 11.0f / 16.0f;
     private static final float TAPER_FACTOR = 0.3f;
+
+    public static boolean debugRestPositions = true;
 
     private final ArmSegmentModel segmentModel;
 
@@ -52,6 +57,11 @@ public class SpiderEntityRenderer extends EntityRenderer<SpiderEntity> {
             return;
         }
 
+        // Interpolated entity position so joint world coords align with the rendered entity position
+        double renderX = Mth.lerp(partialTick, entity.getPrevX(), entity.getX());
+        double renderY = Mth.lerp(partialTick, entity.getPrevY(), entity.getY());
+        double renderZ = Mth.lerp(partialTick, entity.getPrevZ(), entity.getZ());
+
         VertexConsumer buffer = bufferSource.getBuffer(RenderType.entityCutoutNoCull(TEXTURE));
 
         for (int leg = 0; leg < legs.length; leg++) {
@@ -77,9 +87,9 @@ public class SpiderEntityRenderer extends EntityRenderer<SpiderEntity> {
                 poseStack.pushPose();
 
                 poseStack.translate(
-                        start.x - entity.getX(),
-                        start.y - entity.getY(),
-                        start.z - entity.getZ()
+                        start.x - renderX,
+                        start.y - renderY,
+                        start.z - renderZ
                 );
 
                 poseStack.mulPose(Axis.YP.rotation(yaw + (float) Math.PI));
@@ -101,6 +111,73 @@ public class SpiderEntityRenderer extends EntityRenderer<SpiderEntity> {
             }
         }
 
+        if (debugRestPositions) {
+            renderDebugRestPositions(entity, poseStack, bufferSource, renderX, renderY, renderZ);
+        }
+
         super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+    }
+
+    private void renderDebugRestPositions(SpiderEntity entity, PoseStack poseStack,
+                                          MultiBufferSource bufferSource,
+                                          double renderX, double renderY, double renderZ) {
+        Vec3[] targets = entity.getClientLegTargets();
+        VertexConsumer lines = bufferSource.getBuffer(RenderType.lines());
+
+        // Crosses at each rest target
+        if (targets != null) {
+            float s = 0.15f;
+            for (Vec3 t : targets) {
+                if (t == null) continue;
+                float rx = (float)(t.x - renderX);
+                float ry = (float)(t.y - renderY);
+                float rz = (float)(t.z - renderZ);
+
+                poseStack.pushPose();
+                poseStack.translate(rx, ry, rz);
+                Matrix4f pose = poseStack.last().pose();
+                Matrix3f normal = poseStack.last().normal();
+
+                lines.vertex(pose, -s, 0, 0).color(1f,0f,0f,1f).normal(normal,1,0,0).endVertex();
+                lines.vertex(pose,  s, 0, 0).color(1f,0f,0f,1f).normal(normal,1,0,0).endVertex();
+                lines.vertex(pose, 0, -s, 0).color(0f,1f,0f,1f).normal(normal,0,1,0).endVertex();
+                lines.vertex(pose, 0,  s, 0).color(0f,1f,0f,1f).normal(normal,0,1,0).endVertex();
+                lines.vertex(pose, 0, 0, -s).color(0f,0f,1f,1f).normal(normal,0,0,1).endVertex();
+                lines.vertex(pose, 0, 0,  s).color(0f,0f,1f,1f).normal(normal,0,0,1).endVertex();
+
+                poseStack.popPose();
+            }
+        }
+
+        // Per-leg threshold squares centered at each ideal rest position
+        Vec3[] rests = entity.getClientIdealRests();
+        if (rests != null) {
+            float s = (float)(entity.isClientAtRest() ? entity.getStepThresholdStationary() : entity.getStepThresholdMoving());
+            for (Vec3 rest : rests) {
+                if (rest == null) continue;
+                float rx = (float)(rest.x - renderX);
+                float ry = (float)(rest.y - renderY);
+                float rz = (float)(rest.z - renderZ);
+
+                poseStack.pushPose();
+                poseStack.translate(rx, ry, rz);
+                Matrix4f pose = poseStack.last().pose();
+                Matrix3f normal = poseStack.last().normal();
+
+                lines.vertex(pose, -s, 0, -s).color(1f,1f,0f,1f).normal(normal, 1,0,0).endVertex();
+                lines.vertex(pose,  s, 0, -s).color(1f,1f,0f,1f).normal(normal, 1,0,0).endVertex();
+
+                lines.vertex(pose,  s, 0, -s).color(1f,1f,0f,1f).normal(normal,0,0, 1).endVertex();
+                lines.vertex(pose,  s, 0,  s).color(1f,1f,0f,1f).normal(normal,0,0, 1).endVertex();
+
+                lines.vertex(pose,  s, 0,  s).color(1f,1f,0f,1f).normal(normal,-1,0,0).endVertex();
+                lines.vertex(pose, -s, 0,  s).color(1f,1f,0f,1f).normal(normal,-1,0,0).endVertex();
+
+                lines.vertex(pose, -s, 0,  s).color(1f,1f,0f,1f).normal(normal,0,0,-1).endVertex();
+                lines.vertex(pose, -s, 0, -s).color(1f,1f,0f,1f).normal(normal,0,0,-1).endVertex();
+
+                poseStack.popPose();
+            }
+        }
     }
 }
